@@ -109,6 +109,7 @@ jobs:
       - name: build
         shell: msys2 {0}
         run: |
+          dos2unix PKGBUILD
           makepkg-mingw -s -f -i -C jank-win
           ls -al
 
