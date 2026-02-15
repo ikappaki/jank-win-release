@@ -54,11 +54,11 @@ jobs:
           MSYSTEM: CLANG64
         run: dir jank-win/compiler+runtime/build/llvm-install
 
-      - name: Upload LLVM/Clang build as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: clang64-build
-          path: jank-win/compiler+runtime/build/llvm-install
+      # - name: Upload LLVM/Clang build as artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: clang64-build
+      #     path: jank-win/compiler+runtime/build/llvm-install
 
   build:
     needs:
@@ -93,11 +93,17 @@ jobs:
           install: base-devel curl zip mingw-w64-clang-x86_64-git-lfs mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-dlfcn mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-doctest mingw-w64-clang-x86_64-libzip
           update: true
 
-      - name: Download LLVM/Clang
-        uses: actions/download-artifact@v4
+      - name: Cache Clang/LLVM
+        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
         with:
-          name: clang64-build
-          path: jank-win/compiler+runtime/build/llvm-install
+          path: |
+            ${{ github.workspace }}/jank-win/compiler+runtime/build/llvm-install
+          key: clang-${{ runner.os }}-${{ hashFiles('jank-win/compiler+runtime/bin/build-clang', 'jank-win/compiler+runtime/third-party/MINGW-packages/mingw-w64-llvm/**') }}
+      # - name: Download LLVM/Clang
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: clang64-build
+      #     path: jank-win/compiler+runtime/build/llvm-install
 
       - name: install jank clang64 compiler
         shell: msys2 {0}
@@ -110,7 +116,8 @@ jobs:
         shell: msys2 {0}
         run: |
           dos2unix PKGBUILD
-          makepkg-mingw -s -f -i -C jank-win
+          ls -al
+          makepkg-mingw -s -f -i
           ls -al
 
       - name: test
