@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+#
+# Install and update jank and its LLVM dependency for MSYS2 CLANG64 on
+# Windows. Supports downloading the latest release binaries, checking
+# for updates, and self-updating the script.
+#
+# set -x
+
+set -euo pipefail
+BASH_SOURCE0="${BASH_SOURCE[0]:-/dev/stdin}"
+
+SCRIPT_NAME="jank-win-updater"
+SCRIPT_VERSION="0.0.1"
+
+BASE_URL="https://github.com/ikappaki/jank-win-release/releases/download"
+LATEST_URL="https://github.com/ikappaki/jank-win-release/raw/refs/heads/main/LATEST"
+
+INSTALL_ALL=false
+INSTALL_JANK=false
+INSTALL_LLVM=false
+
+JANK_USER_TAG=""
+LOCAL_LATEST=false
+LLVM_USER_TAG=""
+REMOVE_DIRS=true
+SELF_UPDATE=false
+
+self_install() {
+  # self-install when run via curl | bash
+  local install_dir="$HOME/.local/bin"
+  local display_dir="~/.local/bin"
+  local script_url="https://github.com/ikappaki/jank-win-release/raw/refs/heads/main/${SCRIPT_NAME}"
+  echo -e "==> Installing ${SCRIPT_NAME} ${SCRIPT_VERSION} to ${display_dir}...\n"
+  mkdir -p "$install_dir"
+  curl -fsSL "$script_url" -o "$install_dir/$SCRIPT_NAME"
+  chmod +x "$install_dir/$SCRIPT_NAME"
+  echo "Done. Ensure $display_dir is in PATH or run as $display_dir/$SCRIPT_NAME."
+}
+
+if [[ "${MSYSTEM:-}" != "CLANG64" ]]; then
+  echo "Error: This script must be run from an MSYS2 CLANG64 shell."
+  exit 1
+elif [[ "$BASH_SOURCE0" == "/dev/stdin" ]]; then
+  self_install
+  exit 0
+fi
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all)
+        INSTALL_ALL=true
+        shift
+        ;;
+    --jank)
+      INSTALL_JANK=true
+      [[ $# -gt 1 && ! "$2" =~ ^- ]] && { JANK_USER_TAG="$2"; shift; }
+      shift
+      ;;
+    --keep-dirs)
+      REMOVE_DIRS=false
+      shift
+      ;;
+    --llvm)
+      INSTALL_LLVM=true
+      [[ $# -gt 1 && ! "$2" =~ ^- ]] && { LLVM_USER_TAG="$2"; shift; }
+      shift
+      ;;
+    --local-latest)
+      LOCAL_LATEST=true
+      shift
+      ;;
+    --self)
+      SELF_UPDATE=true;
+      shift ;;
+    --version|-v)
+      echo "$SCRIPT_NAME version $SCRIPT_VERSION"
+      exit 0
+      ;;
+    --help|-h)
+      echo "$SCRIPT_NAME: install or update JANK and its LLVM dependency for MSYS2 CLANG64 on MS-Windows"
+      echo "Releases: https://github.com/ikappaki/jank-win-release/releases"
+      echo
+      echo "Running the script without any arguments will check for updates and suggest actions."
+      echo
+      echo "Usage: $0 [--all] [--jank [tag]] [--llvm [tag]] [--self] [--keep-dirs]"
+      echo
+      echo "Options:"
+      echo "  --all              Force install/update of JANK and LLVM"
+      echo "  --jank [tag]       Install JANK; optionally specify a tag instead of latest"
+      echo "  --llvm [tag]       Install LLVM; optionally specify a tag instead of latest"
+      echo "  --self             Self-update the updater script"
+      echo "  --keep-dirs        Keep temporary build/extract directories"
+      echo "  --local-latest     Use local ./LATEST versions file instead of downloading"
+      echo "  -h, --help         Show this help message"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# run self-update first if requested
+$SELF_UPDATE && self_install && exit 0
+
+# --all installs everything
+$INSTALL_ALL && { INSTALL_LLVM=true; INSTALL_JANK=true; }
+
+msg() {
+  echo -e "\n$*\n"
+}
+
+# get_latest(): reads release metadata from either local LATEST file
+# (if LOCAL_LATEST=true) or remote LATEST_URL, sets global variables
+# LLVM_TAG, LLVM_PKG, LLVM_VER, JANK_TAG, JANK_PKG, JANK_VER; exits
+# with error if any tag is missing.
+get_latest() {
+  JANK_TAG="" ; JANK_PKG="" ;   JANK_VER=""
+  LLVM_TAG="" ; LLVM_PKG="" ;   LLVM_VER=""
+                              SCRIPT_VER=""
+
+  local src
+  src=$($LOCAL_LATEST && realpath LATEST || echo "$LATEST_URL")
+  msg "==> Getting latest version information from $src"
+
+  while read -r n t p v; do
+    # echo "DEBUG: $n | $t | $p | $v"
+    case $n in # the xargs use is to remove trailing \r
+        JANK) JANK_TAG=$t; JANK_PKG=$p;   JANK_VER=$(echo $v| xargs) ;;
+        LLVM) LLVM_TAG=$t; LLVM_PKG=$p;   LLVM_VER=$(echo $v| xargs) ;; 
+      SCRIPT)                           SCRIPT_VER=$(echo $v| xargs) ;;
+    esac
+  done < <($LOCAL_LATEST && cat ./LATEST || curl -fsSL "$LATEST_URL")
+
+  [[ -n "$LLVM_TAG" && -n "$JANK_TAG" ]] || { echo "Error: failed to load release info"; exit 1; }
+
+  max_tag=$(( ${#LLVM_TAG} > ${#JANK_TAG} ? ${#LLVM_TAG} : ${#JANK_TAG} ))
+
+  printf "%-6s %-${max_tag}s  %s\n%-6s %-${max_tag}s  %s\n%-6s %-${max_tag}s  %s\n" \
+    "LLVM"   "$LLVM_TAG" "$LLVM_VER" \
+    "JANK"   "$JANK_TAG" "$JANK_VER" \
+    "SCRIPT" ""          "$SCRIPT_VER"
+}
+
+get_latest
+
+check_updates() {
+  local updated=false
+
+  msg "==> Checking for updates"
+
+  # JANK
+  local_ver=$(pacman -Qe "$JANK_PKG" 2>/dev/null | awk '{print $2}' || echo "")
+  [[ -z "$local_ver" ]] && echo "JANK $JANK_PKG not installed. Run: jank-win-install --jank" && updated=true
+  [[ -n "$local_ver" && "$local_ver" != "$JANK_VER" ]] && echo -e "JANK outdated, run with --jank to update.\n  Package: $JANK_PKG\n  Local  : "$local_ver" \n  Latest : "$JANK_VER"" && updated=true
+
+  # LLVM
+  local_ver=$(pacman -Qe "$LLVM_PKG" 2>/dev/null | awk '{print $2}' || echo "")
+  [[ -z "$local_ver" ]] && echo "LLVM $LLVM_PKG not installed. Run: jank-win-install --llvm" && updated=true
+  [[ -n "$local_ver" && "$local_ver" != "$LLVM_VER" ]] && echo -e "LLVM outdated, run with --llvm to update.\n  Package: $LLVM_PKG\n  Local  : $local_ver\n  Latest : $LLVM_VER" && updated=true
+
+  # SCRIPT
+  [[ "$SCRIPT_VERSION" != "$SCRIPT_VER" ]] && echo -e "SCRIPT $SCRIPT_NAME outdated, run with --self to update.\n  Local  : $SCRIPT_VERSION\n  Latest : $SCRIPT_VER" && updated=true
+
+  $updated || echo "All packages are up to date."
+}
+
+install_llvm() {
+  local tag=${LLVM_USER_TAG:-$LLVM_TAG}   # user tag takes precedence
+  local LLVM_BASE_URL="${BASE_URL}/${tag}"
+  local ARCHIVE="${tag}.tar"
+  local CHECKSUM="${ARCHIVE}.sha256"
+  local DEST="jwu-tmp-$tag"
+
+  msg "==> Installing ${tag} from ${LLVM_BASE_URL}"
+
+  msg "==> Creating destination directory: $DEST"
+  mkdir -p "$DEST"
+  pushd "$DEST"
+    curl -fLO "${LLVM_BASE_URL}/${CHECKSUM}"
+
+    # verify existing archive if present
+    if [[ -f "$ARCHIVE" ]] && sha256sum -c "$CHECKSUM"; then
+        msg "==> Using existing archive"
+    else
+        msg "==> Downloading archive: $ARCHIVE"
+        rm -f "$ARCHIVE"
+        curl -fL -O -C - "${LLVM_BASE_URL}/${ARCHIVE}"
+        msg "==> Verifying checksum"
+        sha256sum -c "$CHECKSUM"
+    fi
+
+    msg "==> Extracting archive"
+    tar -xf "$ARCHIVE"
+
+    msg "==> Installing packages"
+    pacman -U --noconfirm ./*.pkg.tar.zst
+  popd
+
+  $REMOVE_DIRS && rm -rf "$DEST"
+
+  msg "==> LLVM installation done!"
+  clang --version
+  echo
+}
+
+install_jank() {
+  local tag=${JANK_USER_TAG:-$JANK_TAG}   # user tag takes precedence
+
+  JANK_BASE_URL="${BASE_URL}/${tag}"
+  JANK_PKG="mingw-w64-clang-x86_64-jank-0.0.1-${tag//-/_}-any.pkg.tar.zst"
+  JANK_CHECKSUM="${JANK_PKG}.sha256"
+  JANK_DEST="jwu-tmp-$tag"
+
+  msg "==> Installing ${tag} from ${JANK_BASE_URL}"
+
+  mkdir -p "$JANK_DEST"
+  pushd "$JANK_DEST"
+    curl -fLO "${JANK_BASE_URL}/${JANK_CHECKSUM}"
+
+    # verify existing archive if present
+    if [[ -f "$JANK_PKG" ]] && sha256sum -c "$JANK_CHECKSUM"; then
+        msg "==> Using existing archive"
+    else
+        msg "==> Downloading archive: $JANK_PKG"
+        rm -f "$JANK_PKG"
+        curl -fL -O -C - "${JANK_BASE_URL}/${JANK_PKG}"
+        msg "==> Verifying checksum"
+        sha256sum -c "$JANK_CHECKSUM"
+    fi
+
+    msg "==> Installing jank-win package"
+    pacman -U --noconfirm "$JANK_PKG"
+  popd
+
+  $REMOVE_DIRS && rm -rf "$JANK_DEST"
+
+  msg "==> jank-win installation done!"
+
+  jank_path="$(command -v jank 2>/dev/null)";
+  msys_bin="/clang64/bin"
+  win_bin="$(cygpath -w "$msys_bin")"
+
+  echo "jank executable:"
+  echo "  MSYS2   path:  $jank_path"
+  echo "  Windows path:  $(cygpath -w "$jank_path")"
+  echo
+  echo "To run from Windows, add to PATH:"
+  echo "  $win_bin"
+  echo "Temporary:"
+  echo "  PowerShell:"
+  echo "    \$env:Path = \"$win_bin;\" + \$env:Path"
+  echo "  cmd.exe:"
+  echo "    set PATH=$win_bin;%PATH%"
+  echo "Permanent:"
+  echo "  System Settings → Environment Variables → edit PATH"
+}
+
+# ----------------------
+# Execute selected functions
+# ----------------------
+if ! $INSTALL_LLVM && ! $INSTALL_JANK; then
+  check_updates
+fi
+
+$INSTALL_LLVM && install_llvm
+$INSTALL_JANK && install_jank

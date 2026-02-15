@@ -1,0 +1,152 @@
+name: Binary relasases for jank/llvm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+
+  windows-build-clang:
+    name: Windows MSYS2 - clang
+    runs-on: windows-2022
+    timeout-minutes: 200
+    if: startsWith(github.event.release.tag_name, 'llvm-')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        if: steps.clang-cache.outputs.cache-hit != 'true'
+        with:
+          msystem: CLANG64
+          install: base-devel git mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
+          update: true
+
+      - name: Checkout the release repo
+        shell: msys2 {0}
+        run: |
+          git clone https://github.com/ikappaki/jank-win.git jank-win
+          pushd jank-win
+            commit=$(git rev-parse --short HEAD)
+          popd
+
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -czf jank-win-src-$commit.tar.gz jank-win
+          echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
+
+      - name: Build Clang/LLVM
+        if: steps.clang-cache.outputs.cache-hit != 'true'
+        shell: msys2 {0}
+        env:
+          MSYSTEM: CLANG64
+        run: |
+          pushd jank-win/compiler+runtime
+            ./bin/build-clang
+
+            # archive llvm source code
+            cd build/llvm-build/src
+            commit=$(git rev-parse --short HEAD)
+            git clean -xfd
+            cd ..
+            tar --exclude='src/.git' --exclude='src/**/.git' -czf jank-win-llvm-project-src-$commit.tar.gz src
+          popd
+
+          echo "LLVM_SRC_TAR=jank-win/compiler+runtime/build/llvm-build/jank-win-llvm-project-src-$commit.tar.gz" >> $GITHUB_ENV
+
+      - name: Archive LLVM build contents
+        shell: msys2 {0}
+        env:
+          MSYSTEM: CLANG64
+        run: |
+          pushd jank-win/compiler+runtime/build/llvm-install
+            tar -cf ../${{ github.event.release.tag_name }}.tar .
+          popd
+          sha256sum ${{ github.event.release.tag_name }}.tar > ${{ github.event.release.tag_name }}.tar.sha256
+          ls -al
+
+      - name: Upload LLVM binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.JANK_SRC_TAR }}
+            ${{ env.LLVM_SRC_TAR }}
+            jank-win/compiler+runtime/build/llvm-*.tar
+            jank-win/compiler+runtime/build/llvm-*.tar.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  windows-build-jank:
+    if: startsWith(github.event.release.tag_name, 'jank-')
+    strategy:
+      fail-fast: false
+      matrix:
+        include: [
+          # { msystem: UCRT64, runner: windows-2022},
+          { msystem: CLANG64, runner: windows-2022},
+          # { msystem: MINGW64, runner: windows-2022},
+          # { msystem: MINGW32, runner: windows-2022},
+          # { msystem: CLANGARM64, runner: windows-11-arm}
+        ]
+    name: ${{ matrix.msystem }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          install: base-devel curl git zstd mingw-w64-clang-x86_64-git-lfs mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-dlfcn mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-doctest mingw-w64-clang-x86_64-libzip
+          update: true
+
+      - name: Checkout jank-win source code
+        shell: msys2 {0}
+        run: |
+          git clone https://github.com/ikappaki/jank-win.git jank-win
+          pushd jank-win
+            git submodule update --init --recursive --jobs 8
+            commit=$(git rev-parse --short HEAD)
+          popd
+
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -czf jank-win-src-$commit.tar.gz jank-win
+          echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
+
+
+      - name: install jank clang64 compiler
+        shell: msys2 {0}
+        run: |
+          ./jank-win-updater --local-latest --llvm
+
+      - name: build
+        shell: msys2 {0}
+        run: |
+          # set release version
+          safe_tag="${{ github.event.release.tag_name }}"
+          safe_tag="${safe_tag//-/_}"
+          echo :tag $safe_tag
+          sed -i "s|^pkgrel=.*|pkgrel=\"$safe_tag\"|" PKGBUILD
+
+          dos2unix PKGBUILD
+          mkdir -p src
+          mv jank-win src
+          # Retry build up to as many times to work around
+          # intermittent failures when building the core libraries.
+          for i in {1..5}; do makepkg-mingw -s -f -i --noconfirm && break; done || false
+
+          f=(mingw-w64-clang-x86_64-jank*.tar.zst)
+          sha256sum "$f" > "$f.sha256"
+
+      - name: test
+        shell: msys2 {0}
+        run: |
+          jank check-health
+
+      - name: Upload jank binaries to the releases page
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.JANK_SRC_TAR }}
+            mingw-w64-clang-x86_64-jank*.tar.zst
+            mingw-w64-clang-x86_64-jank*.tar.zst.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
