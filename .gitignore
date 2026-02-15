@@ -1,0 +1,7 @@
+*~
+#*
+
+/pkg
+/src
+/jank-win
+/*.tar.zst
