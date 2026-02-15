@@ -118,7 +118,7 @@ jobs:
           dos2unix PKGBUILD
           mkdir -p src
           mv jank-win src
-          makepkg-mingw -s -f -i -C .
+          makepkg-mingw -s -f -i
           ls -al
 
       - name: test

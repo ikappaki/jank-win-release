@@ -22,8 +22,9 @@ makedepends=("git"
              "${MINGW_PACKAGE_PREFIX}-dlfcn"
              "${MINGW_PACKAGE_PREFIX}-ninja"
             )
-source=("jank-win")
-sha256sums=('SKIP')
+# source=("jank-win")
+# noextract=("jank-win")
+# sha256sums=('SKIP')
 
 # prepare() {
 #     cd "${srcdir}/jank-win"
