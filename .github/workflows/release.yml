@@ -118,10 +118,18 @@ jobs:
           dos2unix PKGBUILD
           mkdir -p src
           mv jank-win src
-          makepkg-mingw -s -f -i
+          makepkg-mingw -s -f -i --noconfirm || makepkg-mingw -s -f -i --noconfirm
           ls -al
 
       - name: test
         shell: msys2 {0}
         run: |
           jank check-health
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jank-build
+          path: |
+            src/jank-win/compiler+runtime/build/llvm-install
+            mingw-w64-clang-x86_64-jank*.tar.zst
