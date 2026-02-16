@@ -73,11 +73,14 @@ jobs:
         run: |
           cd jank-win/compiler+runtime/build/llvm-install
           tar -cf ../${{ github.event.release.tag_name }}.tar .
+          sha256sum ../${{ github.event.release.tag_name }}.tar > ../${{ github.event.release.tag_name }}.tar.sha256
 
       - name: Upload LLVM to release
         uses: softprops/action-gh-release@v2
         with:
-          files: jank-win/compiler+runtime/build/llvm-*.tar
+          files: |
+            jank-win/compiler+runtime/build/llvm-*.tar
+            jank-win/compiler+runtime/build/llvm-*.tar.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
