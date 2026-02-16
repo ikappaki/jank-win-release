@@ -56,10 +56,10 @@ jobs:
           MSYSTEM: CLANG64
         run: dir jank-win/compiler+runtime/build/llvm-install
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: CLANG64
-          install: tar zstd
+      # - uses: msys2/setup-msys2@v2
+      #   with:
+      #     msystem: CLANG64
+      #     install: tar
 
       - name: Archive LLVM build contents
         shell: msys2 {0}
@@ -67,12 +67,12 @@ jobs:
           MSYSTEM: CLANG64
         run: |
           cd jank-win/compiler+runtime/build/llvm-install
-          tar -I 'zstd -19' -cf ../${{ github.event.release.tag_name }}.tar.zst .
+          tar -cf ../${{ github.event.release.tag_name }}.tar .
 
       - name: Upload LLVM to release
         uses: softprops/action-gh-release@v2
         with:
-          files: jank-win/compiler+runtime/build/llvm--*.tar.zst
+          files: jank-win/compiler+runtime/build/llvm-*.tar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
