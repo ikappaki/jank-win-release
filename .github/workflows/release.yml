@@ -56,10 +56,10 @@ jobs:
           MSYSTEM: CLANG64
         run: dir jank-win/compiler+runtime/build/llvm-install
 
-      # - uses: msys2/setup-msys2@v2
-      #   with:
-      #     msystem: CLANG64
-      #     install: tar
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          install: tar
 
       - name: Archive LLVM build contents
         shell: msys2 {0}
