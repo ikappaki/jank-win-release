@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+#
+# Download and install jank and LLVM related binary releases from the
+# jank-win-release site.
+#
+set -x
+
+set -e
+LLVM_VERSION="llvm-26-01-16-jank3"
+BASE_URL="https://github.com/ikappaki/jank-win-release/releases/download/${LLVM_VERSION}"
+ARCHIVE="${LLVM_VERSION}.tar"
+CHECKSUM="${ARCHIVE}.sha256"
+DEST="$LLVM_VERSION"
+
+( echo "==> Installing ${LLVM_VERSION}from ${BASE_URL}"
+
+  echo "==> Installing required tools"
+  pacman -S --needed --noconfirm curl tar
+
+
+  echo "==> Creating destination directory: $DEST"
+  mkdir -p "$DEST"
+  cd "$DEST"
+
+  curl -LO "${BASE_URL}/${CHECKSUM}"
+
+  # verify existing archive if present
+  if [[ -f "$ARCHIVE" ]] && sha256sum -c "$CHECKSUM"; then
+    echo "==> Using existing archive"
+  else
+    echo "==> Downloading archive: $ARCHIVE"
+    rm -f "$ARCHIVE"
+    curl -fL -O -C - "${BASE_URL}/${ARCHIVE}"
+    echo "==> Verifying checksum"
+    sha256sum -c "$CHECKSUM"
+  fi
+
+  echo "==> Extracting archive"
+  tar -xf "$ARCHIVE"
+
+  echo "==> Installing packages"
+  pacman -U --noconfirm ./*.pkg.tar.zst
+
+  # cd ..
+  # rm -rf "$DEST"
+
+  echo "==> Done!"
+)

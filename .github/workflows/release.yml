@@ -87,11 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
-    if: startsWith(github.event.release.tag_name, 'xxx-')
-    # needs:
-    #   windows-build-clang
-
-    # if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/master'}}
+    if: startsWith(github.event.release.tag_name, 'jank-')
     strategy:
       fail-fast: false
       matrix:
@@ -107,37 +103,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout jank-win at built commit
+      - name: Checkout jank-win source code
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
-          cd jank-win
-          git checkout ${{ needs.windows-build-clang.outputs.jank-win-commit }}
           git submodule update --init --recursive --jobs 8
 
       - uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.msystem }}
-          install: base-devel curl zip mingw-w64-clang-x86_64-git-lfs mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-dlfcn mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-doctest mingw-w64-clang-x86_64-libzip
+          install: base-devel curl mingw-w64-clang-x86_64-git-lfs mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-dlfcn mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-doctest mingw-w64-clang-x86_64-libzip
           update: true
-
-      - name: Cache Clang/LLVM
-        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
-        with:
-          path: |
-            ${{ github.workspace }}/jank-win/compiler+runtime/build/llvm-install
-          key: clang-${{ runner.os }}-${{ hashFiles('jank-win/compiler+runtime/bin/build-clang', 'jank-win/compiler+runtime/third-party/MINGW-packages/mingw-w64-llvm/**') }}
-      # - name: Download LLVM/Clang
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: clang64-build
-      #     path: jank-win/compiler+runtime/build/llvm-install
 
       - name: install jank clang64 compiler
         shell: msys2 {0}
         run: |
-          cd jank-win/compiler+runtime
-          ./bin/build-clang -i
-          clang++ --version
+          ./jank-win-install
 
       - name: build
         shell: msys2 {0}
@@ -146,6 +126,10 @@ jobs:
           mkdir -p src
           mv jank-win src
           makepkg-mingw -s -f -i --noconfirm || makepkg-mingw -s -f -i --noconfirm
+
+          f=mingw-w64-clang-x86_64-jank*.tar.zst
+          sha256sum "$f" > "$f.sha256"
+
           ls -al
 
       - name: test
@@ -160,3 +144,4 @@ jobs:
           path: |
             src/jank-win/compiler+runtime/build/llvm-install
             mingw-w64-clang-x86_64-jank*.tar.zst
+            mingw-w64-clang-x86_64-jank*.tar.zst.sha256
