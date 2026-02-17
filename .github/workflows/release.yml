@@ -106,6 +106,7 @@ jobs:
       - name: Checkout jank-win source code
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
+          cd jank-win
           git submodule update --init --recursive --jobs 8
 
       - uses: msys2/setup-msys2@v2
