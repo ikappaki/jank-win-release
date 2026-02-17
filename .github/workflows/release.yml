@@ -14,20 +14,12 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 200
     if: startsWith(github.event.release.tag_name, 'llvm-')
-    outputs:
-      jank-win-commit: ${{ steps.get-jank-commit.outputs.jank_win_commit }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Checkout the release repo
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
-
-      - name: Record jank-win commit
-        id: get-jank-commit
-        run: |
-          cd jank-win
-          echo "jank_win_commit=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Cache Clang/LLVM
         id: clang-cache
@@ -103,17 +95,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          install: base-devel curl zstd mingw-w64-clang-x86_64-git-lfs mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-dlfcn mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-doctest mingw-w64-clang-x86_64-libzip
+          update: true
+
       - name: Checkout jank-win source code
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
           cd jank-win
           git submodule update --init --recursive --jobs 8
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.msystem }}
-          install: base-devel curl mingw-w64-clang-x86_64-git-lfs mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-dlfcn mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-doctest mingw-w64-clang-x86_64-libzip
-          update: true
+          cd jank-win
+          commit=$(git rev-parse --short HEAD)
+          cd ..
+
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -I 'zstd -19' -cf jank-win-src-$commit.tar jank-win
+          echo "JANK_SRC_TAR=jank-win-src-$commit.tar" >> $GITHUB_ENV
+
 
       - name: install jank clang64 compiler
         shell: msys2 {0}
@@ -123,6 +123,14 @@ jobs:
       - name: build
         shell: msys2 {0}
         run: |
+          # set release version
+          cd jank-win
+          commit=$(git rev-parse --short HEAD)
+          date=$(git log -1 --format=%Y%m%d)
+          cd ..
+          new_pkgrel="${date}_${commit}"
+          sed -i "s/^pkgrel=.*/pkgrel=\"${new_pkgrel}\"/" PKGBUILD
+
           dos2unix PKGBUILD
           mkdir -p src
           mv jank-win src
@@ -140,11 +148,12 @@ jobs:
         run: |
           jank check-health
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload jank binaries to releases
+        uses: softprops/action-gh-release@v2
         with:
-          name: jank-build
-          path: |
-            src/jank-win/compiler+runtime/build/llvm-install
+          files: |
+            ${{ env.JANK_SRC_TAR }}
             mingw-w64-clang-x86_64-jank*.tar.zst
             mingw-w64-clang-x86_64-jank*.tar.zst.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
