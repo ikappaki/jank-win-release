@@ -75,6 +75,7 @@ jobs:
           tar -cf ../${{ github.event.release.tag_name }}.tar .
           cd ..
           sha256sum ${{ github.event.release.tag_name }}.tar > ${{ github.event.release.tag_name }}.tar.sha256
+          ls -al
 
       - name: Upload LLVM to release
         uses: softprops/action-gh-release@v2
