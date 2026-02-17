@@ -110,8 +110,8 @@ jobs:
           commit=$(git rev-parse --short HEAD)
           cd ..
 
-          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -I 'zstd -19' -cf jank-win-src-$commit.tar jank-win
-          echo "JANK_SRC_TAR=jank-win-src-$commit.tar" >> $GITHUB_ENV
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -I 'zstd -19' -cf jank-win-src-$commit.tar.zst jank-win
+          echo "JANK_SRC_TAR=jank-win-src-$commit.tar.zst" >> $GITHUB_ENV
 
 
       - name: install jank clang64 compiler
@@ -123,18 +123,13 @@ jobs:
         shell: msys2 {0}
         run: |
           # set release version
-          cd jank-win
-          commit=$(git rev-parse --short HEAD)
-          date=$(git log -1 --format=%cd --date=format:%Y%m%d)
-          cd ..
-          new_pkgrel="${date}_${commit}"
-          echo :release ${new_pkgrel}
-          sed -i "s|^pkgrel=.*|pkgrel=\"${new_pkgrel}\"|" PKGBUILD
-
+          sed -i "s|^pkgrel=.*|pkgrel=\"${{ github.event.release.tag_name }}\"|" PKGBUILD
 
           dos2unix PKGBUILD
           mkdir -p src
           mv jank-win src
+          # run twice to avoid intermittent failures while building
+          # the jank core library.
           makepkg-mingw -s -f -i --noconfirm || makepkg-mingw -s -f -i --noconfirm
 
           ls -al
