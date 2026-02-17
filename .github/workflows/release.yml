@@ -106,8 +106,6 @@ jobs:
           git clone https://github.com/ikappaki/jank-win.git jank-win
           cd jank-win
           git submodule update --init --recursive --jobs 8
-
-          cd jank-win
           commit=$(git rev-parse --short HEAD)
           cd ..
 
