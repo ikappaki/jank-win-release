@@ -123,7 +123,10 @@ jobs:
         shell: msys2 {0}
         run: |
           # set release version
-          sed -i "s|^pkgrel=.*|pkgrel=\"${{ github.event.release.tag_name }}\"|" PKGBUILD
+          safe_tag="${{ github.event.release.tag_name }}"
+          safe_tag="${safe_tag//-/_}"
+          echo :tag $safe_tag
+          sed -i "s|^pkgrel=.*|pkgrel=\"$safe_tag\"|" PKGBUILD
 
           dos2unix PKGBUILD
           mkdir -p src
