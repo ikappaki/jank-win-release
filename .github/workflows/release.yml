@@ -125,10 +125,12 @@ jobs:
           # set release version
           cd jank-win
           commit=$(git rev-parse --short HEAD)
-          date=$(git log -1 --format=%Y%m%d)
+          date=$(git log -1 --format=%cd --date=format:%Y%m%d)
           cd ..
           new_pkgrel="${date}_${commit}"
-          sed -i "s/^pkgrel=.*/pkgrel=\"${new_pkgrel}\"/" PKGBUILD
+          echo :release ${new_pkgrel}
+          sed -i "s|^pkgrel=.*|pkgrel=\"${new_pkgrel}\"|" PKGBUILD
+
 
           dos2unix PKGBUILD
           mkdir -p src
