@@ -33,7 +33,7 @@ jobs:
         if: steps.clang-cache.outputs.cache-hit != 'true'
         with:
           msystem: CLANG64
-          install: base-devel git tar mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
+          install: base-devel git tar zstd mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
           update: true
 
       - name: Build Clang/LLVM
@@ -44,7 +44,16 @@ jobs:
         run: |
           pushd jank-win/compiler+runtime
             ./bin/build-clang
+
+            # archive llvm source code
+            cd build/llvm-build/src
+            commit=$(git rev-parse --short HEAD)
+            git clean -xfd
+            cd ..
+            tar --exclude='src/.git' --exclude='src/**/.git' -I 'zstd -19' -cf jank-win-llvm-project-src-$commit.tar.zst src
           popd
+
+          echo "LLVM_SRC_TAR=jank-win/compiler+runtime/build/llvm-build/jank-win-llvm-project-src-$commit.tar.zst" >> $GITHUB_ENV
 
       - name: Verify cached Clang
         env:
@@ -69,10 +78,11 @@ jobs:
           sha256sum ${{ github.event.release.tag_name }}.tar > ${{ github.event.release.tag_name }}.tar.sha256
           ls -al
 
-      - name: Upload LLVM to release
+      - name: Upload LLVM binaries to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            ${{ env.LLVM_SRC_TAR }}
             jank-win/compiler+runtime/build/llvm-*.tar
             jank-win/compiler+runtime/build/llvm-*.tar.sha256
         env:
@@ -117,7 +127,7 @@ jobs:
       - name: install jank clang64 compiler
         shell: msys2 {0}
         run: |
-          ./jank-win-install
+          ./jank-win-install --llvm-only
 
       - name: build
         shell: msys2 {0}
@@ -135,12 +145,8 @@ jobs:
           # the jank core library.
           makepkg-mingw -s -f -i --noconfirm || makepkg-mingw -s -f -i --noconfirm
 
-          ls -al
-
           f=(mingw-w64-clang-x86_64-jank*.tar.zst)
           sha256sum "$f" > "$f.sha256"
-
-          ls -al
 
       - name: test
         shell: msys2 {0}

@@ -3,46 +3,127 @@
 # Download and install jank and LLVM related binary releases from the
 # jank-win-release site.
 #
-set -x
+# set -x
 
-set -e
-LLVM_VERSION="llvm-26-01-16-jank3"
-BASE_URL="https://github.com/ikappaki/jank-win-release/releases/download/${LLVM_VERSION}"
-ARCHIVE="${LLVM_VERSION}.tar"
-CHECKSUM="${ARCHIVE}.sha256"
-DEST="$LLVM_VERSION"
+set -euo pipefail
 
-( echo "==> Installing ${LLVM_VERSION}from ${BASE_URL}"
+LLVM_TAG="llvm-26-01-16-jank3"
+JANK_TAG="jank-test-9"
+BASE_URL="https://github.com/ikappaki/jank-win-release/releases/download"
 
-  echo "==> Installing required tools"
-  pacman -S --needed --noconfirm curl tar
+INSTALL_LLVM=true
+INSTALL_JANK=true
+REMOVE_DIRS=true
 
+# parse CLI flags
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --llvm-only)
+      INSTALL_LLVM=true
+      INSTALL_JANK=false
+      shift
+      ;;
+    --jank-only)
+      INSTALL_LLVM=false
+      INSTALL_JANK=true
+      shift
+      ;;
+    --keep-dirs)
+      REMOVE_DIRS=false
+      shift
+      ;;
+    --help|-h)
+      echo "Usage: $0 [--llvm-only] [--jank-only] [--keep-dirs]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
 
-  echo "==> Creating destination directory: $DEST"
-  mkdir -p "$DEST"
-  cd "$DEST"
+install_llvm() {
+    local LLVM_BASE_URL="${BASE_URL}/${LLVM_TAG}"
+    local ARCHIVE="${LLVM_TAG}.tar"
+    local CHECKSUM="${ARCHIVE}.sha256"
+    local DEST="$LLVM_TAG"
 
-  curl -LO "${BASE_URL}/${CHECKSUM}"
+    echo "==> Installing ${LLVM_TAG} from ${LLVM_BASE_URL}"
 
-  # verify existing archive if present
-  if [[ -f "$ARCHIVE" ]] && sha256sum -c "$CHECKSUM"; then
-    echo "==> Using existing archive"
-  else
-    echo "==> Downloading archive: $ARCHIVE"
-    rm -f "$ARCHIVE"
-    curl -fL -O -C - "${BASE_URL}/${ARCHIVE}"
-    echo "==> Verifying checksum"
-    sha256sum -c "$CHECKSUM"
-  fi
+    echo "==> Installing required tools"
+    pacman -S --needed --noconfirm curl tar
 
-  echo "==> Extracting archive"
-  tar -xf "$ARCHIVE"
+    echo "==> Creating destination directory: $DEST"
+    mkdir -p "$DEST"
+    pushd "$DEST"
+      curl -LO "${LLVM_BASE_URL}/${CHECKSUM}"
 
-  echo "==> Installing packages"
-  pacman -U --noconfirm ./*.pkg.tar.zst
+      # verify existing archive if present
+      if [[ -f "$ARCHIVE" ]] && sha256sum -c "$CHECKSUM"; then
+          echo "==> Using existing archive"
+      else
+          echo "==> Downloading archive: $ARCHIVE"
+          rm -f "$ARCHIVE"
+          curl -fL -O -C - "${LLVM_BASE_URL}/${ARCHIVE}"
+          echo "==> Verifying checksum"
+          sha256sum -c "$CHECKSUM"
+      fi
 
-  # cd ..
-  # rm -rf "$DEST"
+      echo "==> Extracting archive"
+      tar -xf "$ARCHIVE"
 
-  echo "==> Done!"
-)
+      echo "==> Installing packages"
+      pacman -U --noconfirm ./*.pkg.tar.zst
+    popd
+
+    $REMOVE_DIRS && rm -rf "$DEST"
+
+    echo "==> LLVM installation done!"
+}
+
+install_jank() {
+    # Configure the tag of jank-win to install
+    JANK_BASE_URL="${BASE_URL}/${JANK_TAG}"
+    # package filename pattern: mingw-w64-clang-x86_64-jank-0.0.1-<tag>-any.pkg.tar.zst
+    JANK_PKG="mingw-w64-clang-x86_64-jank-0.0.1-${JANK_TAG//-/_}-any.pkg.tar.zst"
+    JANK_CHECKSUM="${JANK_PKG}.sha256"
+    JANK_DEST="$JANK_TAG"
+
+    echo "==> Installing ${JANK_TAG} from ${JANK_BASE_URL}"
+
+    mkdir -p "$JANK_DEST"
+    pushd "$JANK_DEST"
+      curl -LO "${JANK_BASE_URL}/${JANK_CHECKSUM}"
+
+      # verify existing archive if present
+      if [[ -f "$JANK_PKG" ]] && sha256sum -c "$JANK_CHECKSUM"; then
+          echo "==> Using existing archive"
+      else
+          echo "==> Downloading archive: $JANK_PKG"
+          rm -f "$JANK_PKG"
+          curl -fL -O -C - "${JANK_BASE_URL}/${JANK_PKG}"
+          echo "==> Verifying checksum"
+          sha256sum -c "$JANK_CHECKSUM"
+      fi
+
+      echo "==> Installing jank-win package"
+      pacman -U --noconfirm "$JANK_PKG"
+    popd
+
+    $REMOVE_DIRS && rm -rf "$JANK_DEST"
+
+    echo "==> jank-win installation done!"
+}
+
+# ----------------------
+# Execute selected functions
+# ----------------------
+if [[ "$INSTALL_LLVM" == true ]]; then
+    install_llvm
+fi
+
+if [[ "$INSTALL_JANK" == true ]]; then
+    install_jank
+fi
+
