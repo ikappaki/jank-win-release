@@ -128,7 +128,9 @@ jobs:
           mv jank-win src
           makepkg-mingw -s -f -i --noconfirm || makepkg-mingw -s -f -i --noconfirm
 
-          f=mingw-w64-clang-x86_64-jank*.tar.zst
+          ls -al
+
+          f=(mingw-w64-clang-x86_64-jank*.tar.zst)
           sha256sum "$f" > "$f.sha256"
 
           ls -al
