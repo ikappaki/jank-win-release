@@ -127,7 +127,7 @@ jobs:
             commit=$(git rev-parse --short HEAD)
           popd
 
-          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -19' -czf jank-win-src-$commit.tar.gz jank-win
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -czf jank-win-src-$commit.tar.gz jank-win
           echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
 
 
