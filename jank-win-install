@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 #
-# Download and install jank and LLVM related binary releases from the
-# jank-win-release site.
+# Download and install jank and LLVM related MSYS2 CLANG64 binary
+# release packages from the jank-win-release site.
 #
 # set -x
 
 set -euo pipefail
 
-LLVM_TAG="llvm-26-01-16-jank3"
+LLVM_TAG="llvm-26-01-16-jank4"
 JANK_TAG="jank-test-9"
 BASE_URL="https://github.com/ikappaki/jank-win-release/releases/download"
 
 INSTALL_LLVM=true
 INSTALL_JANK=true
 REMOVE_DIRS=true
+
+if [[ "${MSYSTEM:-}" != "CLANG64" ]]; then
+  echo "Error: This script must be run from an MSYS2 CLANG64 shell."
+  exit 1
+fi
 
 # parse CLI flags
 while [[ $# -gt 0 ]]; do
@@ -43,6 +48,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+msg() {
+  echo -e "\n$*\n"
+}
+
 install_llvm() {
     local LLVM_BASE_URL="${BASE_URL}/${LLVM_TAG}"
     local ARCHIVE="${LLVM_TAG}.tar"
@@ -51,46 +60,49 @@ install_llvm() {
 
     echo "==> Installing ${LLVM_TAG} from ${LLVM_BASE_URL}"
 
-    echo "==> Installing required tools"
+    msg "==> Installing required tools"
     pacman -S --needed --noconfirm curl tar
 
-    echo "==> Creating destination directory: $DEST"
+    msg "==> Creating destination directory: $DEST"
     mkdir -p "$DEST"
     pushd "$DEST"
       curl -LO "${LLVM_BASE_URL}/${CHECKSUM}"
 
       # verify existing archive if present
       if [[ -f "$ARCHIVE" ]] && sha256sum -c "$CHECKSUM"; then
-          echo "==> Using existing archive"
+          msg "==> Using existing archive"
       else
-          echo "==> Downloading archive: $ARCHIVE"
+          msg "==> Downloading archive: $ARCHIVE"
           rm -f "$ARCHIVE"
           curl -fL -O -C - "${LLVM_BASE_URL}/${ARCHIVE}"
-          echo "==> Verifying checksum"
+          msg "==> Verifying checksum"
           sha256sum -c "$CHECKSUM"
       fi
 
-      echo "==> Extracting archive"
+      msg "==> Extracting archive"
       tar -xf "$ARCHIVE"
 
-      echo "==> Installing packages"
+      msg "==> Installing packages"
       pacman -U --noconfirm ./*.pkg.tar.zst
     popd
 
     $REMOVE_DIRS && rm -rf "$DEST"
 
-    echo "==> LLVM installation done!"
+    msg "==> LLVM installation done!"
+    clang --version
+    echo
 }
 
 install_jank() {
-    # Configure the tag of jank-win to install
     JANK_BASE_URL="${BASE_URL}/${JANK_TAG}"
-    # package filename pattern: mingw-w64-clang-x86_64-jank-0.0.1-<tag>-any.pkg.tar.zst
     JANK_PKG="mingw-w64-clang-x86_64-jank-0.0.1-${JANK_TAG//-/_}-any.pkg.tar.zst"
     JANK_CHECKSUM="${JANK_PKG}.sha256"
     JANK_DEST="$JANK_TAG"
 
-    echo "==> Installing ${JANK_TAG} from ${JANK_BASE_URL}"
+    echo "==> Installing jank-win from ${JANK_BASE_URL}"
+
+    msg "==> Installing required tools"
+    pacman -S --needed --noconfirm curl
 
     mkdir -p "$JANK_DEST"
     pushd "$JANK_DEST"
@@ -98,22 +110,27 @@ install_jank() {
 
       # verify existing archive if present
       if [[ -f "$JANK_PKG" ]] && sha256sum -c "$JANK_CHECKSUM"; then
-          echo "==> Using existing archive"
+          msg "==> Using existing archive"
       else
-          echo "==> Downloading archive: $JANK_PKG"
+          msg "==> Downloading archive: $JANK_PKG"
           rm -f "$JANK_PKG"
           curl -fL -O -C - "${JANK_BASE_URL}/${JANK_PKG}"
-          echo "==> Verifying checksum"
+          msg "==> Verifying checksum"
           sha256sum -c "$JANK_CHECKSUM"
       fi
 
-      echo "==> Installing jank-win package"
+      msg "==> Installing jank-win package"
       pacman -U --noconfirm "$JANK_PKG"
     popd
 
     $REMOVE_DIRS && rm -rf "$JANK_DEST"
 
-    echo "==> jank-win installation done!"
+    msg "==> jank-win installation done!"
+
+    jank_path="$(command -v jank 2>/dev/null)";
+    echo "jank executable:"
+    echo "  MSYS2   path:  $jank_path"
+    echo "  Windows path:  $(cygpath -w "$jank_path")"
 }
 
 # ----------------------
@@ -126,4 +143,3 @@ fi
 if [[ "$INSTALL_JANK" == true ]]; then
     install_jank
 fi
-

@@ -20,20 +20,26 @@ jobs:
       - name: Checkout the release repo
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
+          pushd jank-win
+            commit=$(git rev-parse --short HEAD)
+          popd
 
-      - name: Cache Clang/LLVM
-        id: clang-cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
-        with:
-          path: |
-            ${{ github.workspace }}/jank-win/compiler+runtime/build/llvm-install
-          key: clang-${{ runner.os }}-${{ hashFiles('jank-win/compiler+runtime/bin/build-clang', 'jank-win/compiler+runtime/third-party/MINGW-packages/mingw-w64-llvm/**') }}
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -czf jank-win-src-$commit.tar.gz jank-win
+          echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
+
+      # - name: Cache Clang/LLVM
+      #   id: clang-cache
+      #   uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+      #   with:
+      #     path: |
+      #       ${{ github.workspace }}/jank-win/compiler+runtime/build/llvm-install
+      #     key: clang-${{ runner.os }}-${{ hashFiles('jank-win/compiler+runtime/bin/build-clang', 'jank-win/compiler+runtime/third-party/MINGW-packages/mingw-w64-llvm/**') }}
 
       - uses: msys2/setup-msys2@v2
         if: steps.clang-cache.outputs.cache-hit != 'true'
         with:
           msystem: CLANG64
-          install: base-devel git tar zstd mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
+          install: base-devel git mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
           update: true
 
       - name: Build Clang/LLVM
@@ -50,31 +56,31 @@ jobs:
             commit=$(git rev-parse --short HEAD)
             git clean -xfd
             cd ..
-            tar --exclude='src/.git' --exclude='src/**/.git' -I 'zstd -19' -cf jank-win-llvm-project-src-$commit.tar.zst src
+            tar --exclude='src/.git' --exclude='src/**/.git' -czf jank-win-llvm-project-src-$commit.tar.gz src
           popd
 
-          echo "LLVM_SRC_TAR=jank-win/compiler+runtime/build/llvm-build/jank-win-llvm-project-src-$commit.tar.zst" >> $GITHUB_ENV
+          echo "LLVM_SRC_TAR=jank-win/compiler+runtime/build/llvm-build/jank-win-llvm-project-src-$commit.tar.gz" >> $GITHUB_ENV
 
-      - name: Verify cached Clang
-        env:
-          MSYSTEM: CLANG64
-        run: dir jank-win/compiler+runtime/build/llvm-install
+      # - name: Verify cached Clang
+      #   env:
+      #     MSYSTEM: CLANG64
+      #   run: dir jank-win/compiler+runtime/build/llvm-install
 
         # if there is a cache hit, we still need to install tar
-      - uses: msys2/setup-msys2@v2
-        if: steps.clang-cache.outputs.cache-hit == 'true'
-        with:
-          msystem: CLANG64
-          install: tar
+      # - uses: msys2/setup-msys2@v2
+      #   if: steps.clang-cache.outputs.cache-hit == 'true'
+      #   with:
+      #     msystem: CLANG64
+      #     install: tar
 
       - name: Archive LLVM build contents
         shell: msys2 {0}
         env:
           MSYSTEM: CLANG64
         run: |
-          cd jank-win/compiler+runtime/build/llvm-install
-          tar -cf ../${{ github.event.release.tag_name }}.tar .
-          cd ..
+          pushd jank-win/compiler+runtime/build/llvm-install
+            tar -cf ../${{ github.event.release.tag_name }}.tar .
+          popd
           sha256sum ${{ github.event.release.tag_name }}.tar > ${{ github.event.release.tag_name }}.tar.sha256
           ls -al
 
@@ -82,6 +88,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            ${{ env.JANK_SRC_TAR }}
             ${{ env.LLVM_SRC_TAR }}
             jank-win/compiler+runtime/build/llvm-*.tar
             jank-win/compiler+runtime/build/llvm-*.tar.sha256
@@ -115,13 +122,13 @@ jobs:
         shell: msys2 {0}
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
-          cd jank-win
-          git submodule update --init --recursive --jobs 8
-          commit=$(git rev-parse --short HEAD)
-          cd ..
+          pushd jank-win
+            git submodule update --init --recursive --jobs 8
+            commit=$(git rev-parse --short HEAD)
+          popd
 
-          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -I 'zstd -19' -cf jank-win-src-$commit.tar.zst jank-win
-          echo "JANK_SRC_TAR=jank-win-src-$commit.tar.zst" >> $GITHUB_ENV
+          tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -19' -czf jank-win-src-$commit.tar.gz jank-win
+          echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
 
 
       - name: install jank clang64 compiler
