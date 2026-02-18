@@ -39,7 +39,7 @@ jobs:
         if: steps.clang-cache.outputs.cache-hit != 'true'
         with:
           msystem: CLANG64
-          install: base-devel git mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
+          install: base-devel mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
           update: true
 
       - name: Build Clang/LLVM
@@ -148,9 +148,9 @@ jobs:
           dos2unix PKGBUILD
           mkdir -p src
           mv jank-win src
-          # run twice to avoid intermittent failures while building
-          # the jank core library.
-          makepkg-mingw -s -f -i --noconfirm || makepkg-mingw -s -f -i --noconfirm
+          # run as many times to go around flackiness issue while building the core libraries
+          for i in {1..5}; do makepkg-mingw -s -f -i --noconfirm && break; done || false
+
 
           f=(mingw-w64-clang-x86_64-jank*.tar.zst)
           sha256sum "$f" > "$f.sha256"
@@ -160,7 +160,7 @@ jobs:
         run: |
           jank check-health
 
-      - name: Upload jank binaries to releases
+      - name: Upload jank binaries to the releases page
         uses: softprops/action-gh-release@v2
         with:
           files: |
