@@ -27,14 +27,6 @@ jobs:
           tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -czf jank-win-src-$commit.tar.gz jank-win
           echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
 
-      # - name: Cache Clang/LLVM
-      #   id: clang-cache
-      #   uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
-      #   with:
-      #     path: |
-      #       ${{ github.workspace }}/jank-win/compiler+runtime/build/llvm-install
-      #     key: clang-${{ runner.os }}-${{ hashFiles('jank-win/compiler+runtime/bin/build-clang', 'jank-win/compiler+runtime/third-party/MINGW-packages/mingw-w64-llvm/**') }}
-
       - uses: msys2/setup-msys2@v2
         if: steps.clang-cache.outputs.cache-hit != 'true'
         with:
@@ -61,18 +53,6 @@ jobs:
 
           echo "LLVM_SRC_TAR=jank-win/compiler+runtime/build/llvm-build/jank-win-llvm-project-src-$commit.tar.gz" >> $GITHUB_ENV
 
-      # - name: Verify cached Clang
-      #   env:
-      #     MSYSTEM: CLANG64
-      #   run: dir jank-win/compiler+runtime/build/llvm-install
-
-        # if there is a cache hit, we still need to install tar
-      # - uses: msys2/setup-msys2@v2
-      #   if: steps.clang-cache.outputs.cache-hit == 'true'
-      #   with:
-      #     msystem: CLANG64
-      #     install: tar
-
       - name: Archive LLVM build contents
         shell: msys2 {0}
         env:
@@ -95,7 +75,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
+  windows-build-jank:
     if: startsWith(github.event.release.tag_name, 'jank-')
     strategy:
       fail-fast: false
@@ -134,7 +114,7 @@ jobs:
       - name: install jank clang64 compiler
         shell: msys2 {0}
         run: |
-          ./jank-win-install --llvm-only
+          ./jank-win-updater --local-latest --llvm
 
       - name: build
         shell: msys2 {0}
@@ -148,9 +128,9 @@ jobs:
           dos2unix PKGBUILD
           mkdir -p src
           mv jank-win src
-          # run as many times to go around flackiness issue while building the core libraries
+          # Retry build up to as many times to work around
+          # intermittent failures when building the core libraries.
           for i in {1..5}; do makepkg-mingw -s -f -i --noconfirm && break; done || false
-
 
           f=(mingw-w64-clang-x86_64-jank*.tar.zst)
           sha256sum "$f" > "$f.sha256"
