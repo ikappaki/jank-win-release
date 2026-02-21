@@ -59,20 +59,21 @@ jobs:
         env:
           MSYSTEM: CLANG64
         run: |
-          pushd jank-win/compiler+runtime/build/llvm-install
-            tar -cf ../${{ github.event.release.tag_name }}.tar .
-          popd
+          cd jank-win/compiler+runtime/build/llvm-install
+          tar -cf ../${{ github.event.release.tag_name }}.tar .
+          cd ..
           sha256sum ${{ github.event.release.tag_name }}.tar > ${{ github.event.release.tag_name }}.tar.sha256
           ls -al
-
+          echo "LLVM_BIN_TAR=jank-win/compiler+runtime/build/${{ github.event.release.tag_name }}.tar" >> $GITHUB_ENV
+          echo "LLVM_BIN_TAR_SHA256=jank-win/compiler+runtime/build/${{ github.event.release.tag_name }}.tar.sha256" >> $GITHUB_ENV
       - name: Upload LLVM binaries to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             ${{ env.JANK_SRC_TAR }}
             ${{ env.LLVM_SRC_TAR }}
-            jank-win/compiler+runtime/build/llvm-*.tar
-            jank-win/compiler+runtime/build/llvm-*.tar.sha256
+            ${{ env.LLVM_BIN_TAR }}
+            ${{ env.LLVM_BIN_TAR_SHA256 }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
