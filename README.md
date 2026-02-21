@@ -32,7 +32,7 @@ Optional: `--all`, `--jank [tag]`, `--llvm [tag]`,
 
 1. Download releases from [Releases](https://github.com/ikappaki/jank-win-release/releases).
 
-2. **Install LLVM** (multiple packages):
+2. **Install LLVM**:
 
 ```bash
 mkdir -p ~/jank-win-temp/llvm
@@ -41,10 +41,10 @@ pacman -U --noconfirm ~/jank-win-temp/llvm/*.pkg.tar.zst
 rm -rf ~/jank-win-temp/llvm
 ```
 
-3. **Install jank-win** (single package):
+3. **Install jank-win**:
 
 ```bash
-pacman -U /path/to/mingw-w64-clang-x86_64-jank-<tag>.pkg.tar.zst
+pacman -U mingw-w64-clang-x86_64-jank-<tag>.pkg.tar.zst
 ```
 
 ## Running jank

@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Checkout the release repo
+        shell: msys2 {0}
         run: |
           git clone https://github.com/ikappaki/jank-win.git jank-win
           pushd jank-win
