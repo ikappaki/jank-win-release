@@ -1,23 +1,13 @@
 # jank-win-release
 
-Prebuilt Windows binaries for **jank** using MSYS2 CLANG64.
-Includes:
+Prebuilt Windows binaries for [jank-win](https://github.com/ikappaki/jank-win) using MSYS2 CLANG64.
+Includes **LLVM** (dependency) and **jank-win** (the windows build).
 
-* **LLVM** (dependency)
-* **jank-win** (Windows build)
-
-Binaries are on [Releases](https://github.com/ikappaki/jank-win-release/releases) under tags:
-
-* `llvm-<source-cut-date>`
-* `jank-<jank-src-cut-date>-<jank-win-src-cut-date>`
-
----
+Binaries are available on [Releases](https://github.com/ikappaki/jank-win-release/releases) under tags `llvm-<source-cut-date>` and `jank-<jank-src-cut-date>-<jank-win-src-cut-date>`.
 
 ## Prerequisites
 
 Install [MSYS2](https://www.msys2.org/) and use the **MSYS2 CLANG64** terminal for all commands.
-
----
 
 ## Installation
 
@@ -38,8 +28,6 @@ jank-win-updater --self    # update the updater script
 
 Optional: `--all`, `--jank [tag]`, `--llvm [tag]`,
 
----
-
 ### Manual
 
 1. Download releases from [Releases](https://github.com/ikappaki/jank-win-release/releases).
@@ -58,8 +46,6 @@ rm -rf ~/jank-win-temp/llvm
 ```bash
 pacman -U /path/to/mingw-w64-clang-x86_64-jank-<tag>.pkg.tar.zst
 ```
-
----
 
 ## Running jank
 
