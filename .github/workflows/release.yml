@@ -17,6 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: msys2/setup-msys2@v2
+        if: steps.clang-cache.outputs.cache-hit != 'true'
+        with:
+          msystem: CLANG64
+          install: base-devel mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
+          update: true
+
       - name: Checkout the release repo
         shell: msys2 {0}
         run: |
@@ -27,13 +34,6 @@ jobs:
 
           tar --exclude='jank-win/.git' --exclude='jank-win/**/.git' -czf jank-win-src-$commit.tar.gz jank-win
           echo "JANK_SRC_TAR=jank-win-src-$commit.tar.gz" >> $GITHUB_ENV
-
-      - uses: msys2/setup-msys2@v2
-        if: steps.clang-cache.outputs.cache-hit != 'true'
-        with:
-          msystem: CLANG64
-          install: base-devel mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libunwind mingw-w64-clang-x86_64-libffi mingw-w64-clang-x86_64-z3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-compiler-rt mingw-w64-clang-x86_64-libc++
-          update: true
 
       - name: Build Clang/LLVM
         if: steps.clang-cache.outputs.cache-hit != 'true'
