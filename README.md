@@ -58,32 +58,32 @@ pacman -U mingw-w64-clang-x86_64-jank-<tag>.pkg.tar.zst
 
 ## Running jank
 
-**MSYS2 CLANG64 terminal:**
+In the **MSYS2 CLANG64 terminal**, `jank` can be run directly:
 
 ```bash
 jank check-health
 ```
 
-**Windows PowerShell / cmd:**
-
-1. Open the **MSYS2 CLANG64 terminal** and get the Windows path of the bin directory:
+On Windows, add the MSYS2 bin directory to `PATH` to run `jank` from Powershell, cmd, or other shells:
 
 ```bash
 cygpath -w /clang64/bin
 ```
 
-2. Use that path to update your Windows PATH temporarily:
+Temporary update:
 
 Powershell:
+
 ```powershell
 $env:Path = "<output-of-cygpath>" + ";" + $env:Path
 jank check-health
 ```
 
 cmd:
+
 ```cmd
 set PATH=<output-of-cygpath>;%PATH%
 jank check-health
 ```
 
-For permanent access, add the `cygpath -w /clang64/bin` output to the system PATH.
+For permanent access, add the same path to the system PATH.
