@@ -35,9 +35,9 @@ Binaries are available on [Releases](https://github.com/ikappaki/jank-win-releas
 2. **Install LLVM**:
 
 ```bash
-export LLVM_BIN_PREFIX=llvm-<...>
+export LLVM_TAR=llvm-<...>.tar
 mkdir -p ~/jank-win-temp/llvm
-tar -C ~/jank-win-temp/llvm -xf ${LLVM_BIN_PREFIX}.tar
+tar -C ~/jank-win-temp/llvm -xf ${LLVM_TAR}.tar
 pacman -U --noconfirm ~/jank-win-temp/llvm/*.pkg.tar.zst
 rm -fr ~/jank-win-temp/llvm
 ```
@@ -78,4 +78,4 @@ set PATH=<output-of-cygpath>;%PATH%
 jank check-health
 ```
 
-> For permanent access, add the path returned by `cygpath -w /clang64/bin` to the system PATH.
+For permanent access, add the `<output-of-cygpath>` to the system PATH.

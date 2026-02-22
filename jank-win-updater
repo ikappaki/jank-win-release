@@ -4,7 +4,7 @@
 # Windows. Supports downloading the latest release binaries, checking
 # for updates, and self-updating the script.
 #
-# set -x
+set -x
 
 set -euo pipefail
 BASH_SOURCE0="${BASH_SOURCE[0]:-/dev/stdin}"
@@ -202,7 +202,6 @@ install_llvm() {
 
   msg "==> LLVM installation done!"
   clang --version
-  echo
 }
 
 install_jank() {
