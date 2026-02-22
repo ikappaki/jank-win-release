@@ -17,14 +17,22 @@ curl -fsSL https://github.com/ikappaki/jank-win-release/raw/refs/heads/main/jank
 
 > Installs `jank-win-updater` to `~/.local/bin`. Make sure it's in your `PATH`.
 
+**First run:**
+
 ```bash
-jank-win-updater           # checks for updates and suggests actions
+jank-win-updater --all     # install LLVM and jank
+```
+
+**After initial setup:**
+
+```bash
+jank-win-updater           # check for updates and suggest actions
 jank-win-updater --llvm    # install/update LLVM
 jank-win-updater --jank    # install/update jank
 jank-win-updater --self    # update the updater script
 ```
 
-Optional: `--all`, `--jank [tag]`, `--llvm [tag]`,
+Optional: `--jank [tag]`, `--llvm [tag]`
 
 ### Manual
 

@@ -4,7 +4,7 @@
 # Windows. Supports downloading the latest release binaries, checking
 # for updates, and self-updating the script.
 #
-set -x
+# set -x
 
 set -euo pipefail
 BASH_SOURCE0="${BASH_SOURCE[0]:-/dev/stdin}"
@@ -259,9 +259,6 @@ install_jank() {
 # ----------------------
 # Execute selected functions
 # ----------------------
-if ! $INSTALL_LLVM && ! $INSTALL_JANK; then
-  check_updates
-fi
-
-$INSTALL_LLVM && install_llvm
-$INSTALL_JANK && install_jank
+if ! $INSTALL_LLVM && ! $INSTALL_JANK; then check_updates; fi
+if $INSTALL_LLVM; then install_llvm; fi
+if $INSTALL_JANK; then install_jank; fi
