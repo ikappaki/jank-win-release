@@ -36,9 +36,9 @@ Optional: `--jank [tag]`, `--llvm [tag]`
 
 ### Manual
 
-Binaries are available on [Releases](https://github.com/ikappaki/jank-win-release/releases) under tags `llvm-<inc>--<source-cut-date>` and `jank-<inc>-<jank-src-cut-date>-<jank-win-src-cut-date>`.
+Binaries are available on [Releases](https://github.com/ikappaki/jank-win-release/releases) under tags `llvm-<inc>-<source-cut-date>` and `jank-<inc>-<jank-src-cut-date>-<jank-win-src-cut-date>`.
 
-1. Download the latest [releases](https://github.com/ikappaki/jank-win-release/releases).
+1. Download the latest LLVM and jank-win [releases](https://github.com/ikappaki/jank-win-release/releases).
 
 2. **Install LLVM**:
 
@@ -66,7 +66,7 @@ jank check-health
 
 **Windows PowerShell / cmd:**
 
-1. Open the **MSYS2 CLANG64 terminal** and get the Windows path:
+1. Open the **MSYS2 CLANG64 terminal** and get the Windows path of the bin directory:
 
 ```bash
 cygpath -w /clang64/bin
@@ -86,4 +86,4 @@ set PATH=<output-of-cygpath>;%PATH%
 jank check-health
 ```
 
-For permanent access, add the `<output-of-cygpath>` to the system PATH.
+For permanent access, add the `cygpath -w /clang64/bin` output to the system PATH.

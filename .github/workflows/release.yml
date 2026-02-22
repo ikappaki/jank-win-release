@@ -124,7 +124,6 @@ jobs:
           # set release version
           safe_tag="${{ github.event.release.tag_name }}"
           safe_tag="${safe_tag//-/_}"
-          echo :tag $safe_tag
           sed -i "s|^pkgrel=.*|pkgrel=\"$safe_tag\"|" PKGBUILD
 
           dos2unix PKGBUILD

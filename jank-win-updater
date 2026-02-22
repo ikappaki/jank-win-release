@@ -10,7 +10,7 @@ set -euo pipefail
 BASH_SOURCE0="${BASH_SOURCE[0]:-/dev/stdin}"
 
 SCRIPT_NAME="jank-win-updater"
-SCRIPT_VERSION="0.0.1"
+SCRIPT_VERSION="0.1.0"
 
 BASE_URL="https://github.com/ikappaki/jank-win-release/releases/download"
 LATEST_URL="https://github.com/ikappaki/jank-win-release/raw/refs/heads/main/LATEST"
