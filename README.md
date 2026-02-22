@@ -36,7 +36,7 @@ Optional: `--jank [tag]`, `--llvm [tag]`
 
 ### Manual
 
-Binaries are available on [Releases](https://github.com/ikappaki/jank-win-release/releases) under tags `llvm-<inc>-<source-cut-date>` and `jank-<inc>-<jank-src-cut-date>-<jank-win-src-cut-date>`.
+Binaries are available on [Releases](https://github.com/ikappaki/jank-win-release/releases) under tags `llvm-<inc>-<source-cut-date>` and `jank-<inc>-src<jank-src-cut-date>-win<jank-win-src-cut-date>` for jank (upstream jank snapshot -> Windows port snapshot).
 
 1. Download the latest LLVM and jank-win [releases](https://github.com/ikappaki/jank-win-release/releases).
 
