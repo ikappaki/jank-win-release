@@ -64,11 +64,15 @@ In the **MSYS2 CLANG64 terminal**, `jank` can be run directly:
 jank check-health
 ```
 
-On Windows, add the MSYS2 bin directory to `PATH` to run `jank` from Powershell, cmd, or other shells:
+On Windows, to run jank from PowerShell, cmd, or other shells, add the MSYS2 CLANG64 bin directory to your PATH.
+
+From the MSYS2 CLANG64 terminal, run:
 
 ```bash
 cygpath -w /clang64/bin
 ```
+
+This prints the Windows-style path (e.g. `C:\msys64\clang64\bin`).
 
 Temporary update:
 
