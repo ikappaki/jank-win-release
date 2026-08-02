@@ -42,7 +42,7 @@ jobs:
           MSYSTEM: CLANG64
         run: |
           pushd jank-win/compiler+runtime
-            ./bin/build-clang
+            ./bin/build-clang-msys2
 
             # archive llvm source code
             cd build/llvm-build/src
